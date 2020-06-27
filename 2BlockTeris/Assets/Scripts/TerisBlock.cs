@@ -12,7 +12,7 @@ public class TerisBlock : MonoBehaviour
     public Vector3 LastMoveDir = Vector3.zero;
     public List<Vector3> currentPoints = new List<Vector3>();
 
-
+    public bool isBomb = false;
 
     public int ID;
 

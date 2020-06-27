@@ -47,6 +47,7 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         TerisItem O = new TerisItem("Images/O", "Prefabs/O");
         TerisItem S = new TerisItem("Images/S", "Prefabs/S");
         TerisItem Z = new TerisItem("Images/Z", "Prefabs/Z");
+        TerisItem Bomb = new TerisItem("Images/BOMB", "Prefabs/BOMB");
 
         items.Add(I);
         items.Add(T);
@@ -55,6 +56,7 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         items.Add(O);
         items.Add(S);
         items.Add(Z);
+        items.Add(Bomb);
 
     }
 
@@ -106,6 +108,8 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
     // Update is called once per frame
     void Update()
     {
+        if (Game.Instance.gameOver)
+            return;
         if (!waitingForNextRound)
         {
             if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
@@ -239,48 +243,34 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
 
     }
 
-    void AddToGrid(TerisBlock teris1, TerisBlock teris2)
+    void BombEffect(TerisBlock teris)
     {
-        foreach (Transform children in teris1.transform)
+        if (teris.transform.GetChild(0).GetComponent<Animator>() != null)
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
-            {
-                break;
-            }
+            teris.transform.GetChild(0).GetComponent<Animator>().SetTrigger("Dispear");
         }
-        foreach (Transform children in teris2.transform)
-        {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
-            {
-                break;
-            }
-        }
-        falled1 = true;
-        falled2 = true;
-        teris1.enabled = false;
-        teris2.enabled = false;
-        CheckForLines();
-        CheckTwoTerisFalled();
-    }
+        teris.enabled = false;
+        GameObject effect = Instantiate(Resources.Load<GameObject>("Effect/BombEffect"), teris.transform.position, Quaternion.identity);
+        Transform children = teris.transform.GetChild(0);
+        int roundedX = Mathf.RoundToInt(children.transform.position.x);
+        int roundedY = Mathf.RoundToInt(children.transform.position.y);
 
-    void AddToGrid(TerisBlock teris)
-    {
-        foreach (Transform children in teris.transform)
+        for (int x = roundedX - 2; x < roundedX + 3; x++)
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
+            for (int y = roundedY - 2; y < roundedY + 3; y++)
             {
-                break;
+                int newx = Mathf.Clamp(x, 0, 9);
+                int newy = Mathf.Clamp(y, 0, 20);
+                if (grid[newx, newy] != null)
+                {
+                    Destroy(grid[newx, newy].gameObject);
+                    grid[newx, newy] = null;
+                }
             }
+
+
         }
+
         switch (teris.ID)
         {
             case 1:
@@ -290,7 +280,87 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
                 falled2 = true;
                 break;
         }
-        teris.enabled = false;
+        
+        Destroy(effect, 2f);
+        Destroy(teris.gameObject,0.5f);
+    }
+
+    void AddToGrid(TerisBlock teris1, TerisBlock teris2)
+    {
+        if (teris1.isBomb)
+        {
+            BombEffect(teris1);
+        }
+        else
+        {
+            foreach (Transform children in teris1.transform)
+            {
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                grid[roundedX, roundedY] = children;
+                if (CheckForGameover(roundedY))
+                {
+                    break;
+                }
+            }
+            teris1.enabled = false;
+        }
+        if (teris2.isBomb)
+        {
+            BombEffect(teris2);
+        }
+        else
+        {
+            foreach (Transform children in teris2.transform)
+            {
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                grid[roundedX, roundedY] = children;
+                if (CheckForGameover(roundedY))
+                {
+                    break;
+                }
+            }
+            teris2.enabled = false;
+
+        }
+
+        falled1 = true;
+        falled2 = true;
+
+        CheckForLines();
+        CheckTwoTerisFalled();
+    }
+
+    void AddToGrid(TerisBlock teris)
+    {
+        if (teris.isBomb)
+        {
+            BombEffect(teris);
+        }
+        else
+        {
+            foreach (Transform children in teris.transform)
+            {
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                grid[roundedX, roundedY] = children;
+                if (CheckForGameover(roundedY))
+                {
+                    break;
+                }
+            }
+            switch (teris.ID)
+            {
+                case 1:
+                    falled1 = true;
+                    break;
+                case 2:
+                    falled2 = true;
+                    break;
+            }
+            teris.enabled = false;
+        }
 
         CheckForLines();
         CheckTwoTerisFalled();
@@ -300,7 +370,7 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
 
     bool CheckForGameover(int hei)
     {
-        if (hei >= height - 2)
+        if (hei >= height - 1.5f)
         {
             UImanager.Instance.Gameover();
             return true;
@@ -319,7 +389,7 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
             {
                 perfect++;
                 DeleteLine(i);
-                RowDown(i);
+                StartCoroutine(RowDownCor(i));
             }
         }
         int addscore = 100 * perfect + 20 * perfect * perfect;
@@ -340,12 +410,18 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
     {
         for (int j = 0; j < width; j++)
         {
-            Destroy(grid[j, i].gameObject,0.5f);
+            grid[j, i].GetComponent<Animator>().SetTrigger("Dispear");
+            Destroy(grid[j, i].gameObject, 0.5f);
             grid[j, i] = null;
         }
     }
 
- 
+
+    IEnumerator RowDownCor(int i)
+    {
+        yield return new WaitForSeconds(0.5f);
+        RowDown(i);
+    }
 
     void RowDown(int i)
     {
