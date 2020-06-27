@@ -12,28 +12,14 @@ public enum Direction
 
 public abstract class Command
 {
-    public abstract void execute(Animator anim,Direction dir);
+    public abstract void execute(TerisBlock teris1,TerisBlock teris2);
 }
 
 public class MoveCommand : Command
 {
-    public override void execute(Animator anim,Direction dir)
+    public override void execute(TerisBlock teris1, TerisBlock teris2)
     {
-        switch (dir)
-        {
-            case Direction.right:
-                anim.SetTrigger("moveright");
-                break;
-            case Direction.left:
-                anim.SetTrigger("moveleft");
-                break;
-            case Direction.up:
-                anim.SetTrigger("moveup");
-                break;
-            case Direction.down:
-                anim.SetTrigger("movedown");
-                break;
-        }
+      
 
     }
 

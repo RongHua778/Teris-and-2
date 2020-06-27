@@ -4,150 +4,99 @@ using UnityEngine;
 
 public class TerisBlock : MonoBehaviour
 {
-    float previousTime;
-
 
     public Vector3 rotationPoint;
 
     public float falltime = 0.8f;
-    public static int height = 20;
-    public static int width = 10;
-    static Transform[,] grid = new Transform[width, height];
+
+    public Vector3 LastMoveDir = Vector3.zero;
+    public List<Vector3> currentPoints = new List<Vector3>();
+
+
 
     public int ID;
 
-    // Start is called before the first frame update
     void Start()
     {
 
     }
 
-    // Update is called once per frame
-    void Update()
+    public void Rot()
     {
-        if (Input.GetKeyDown(KeyCode.LeftArrow)||Input.GetKeyDown(KeyCode.A))
-        {
-            transform.position += new Vector3(-1, 0, 0);
-            if (!ValidMove())
-                transform.position -= new Vector3(-1, 0, 0);
+        transform.RotateAround(transform.TransformPoint(rotationPoint), Vector3.forward, 90f);
+        SetPoints();
+    }
 
-        }
-        else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
-        {
-            transform.position += new Vector3(1, 0, 0);
-            if (!ValidMove())
-                transform.position -= new Vector3(1, 0, 0);
-        }
-        else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
-        {
-            transform.RotateAround(transform.TransformPoint(rotationPoint), Vector3.forward, 90f);
-            if(!ValidMove())
-                transform.RotateAround(transform.TransformPoint(rotationPoint), Vector3.forward, -90f);
-        }
+    public void RotBack()
+    {
+        transform.RotateAround(transform.TransformPoint(rotationPoint), Vector3.forward, -90f);
+        SetPoints();
+    }
 
-        if (Time.time - previousTime > (Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S) ? falltime / 10 : falltime))
+    public void Move(Vector3 dir)
+    {
+        transform.position += dir;
+        LastMoveDir = dir;
+        SetPoints();
+    }
+
+    public void MoveBack()
+    {
+        transform.position -= LastMoveDir;
+        SetPoints();
+    }
+    void SetPoints()
+    {
+        currentPoints.Clear();
+        foreach (Transform children in transform)
         {
-            transform.position += new Vector3(0, -1, 0);
-            if (!ValidMove())
-            {
-                transform.position -= new Vector3(0, -1, 0);
-                AddToGrid();
-                CheckForLines();
-                GameEvents.Instance.TetrominosFalled(this.ID);
-                this.enabled = false;
-            }
-            previousTime = Time.time;
+            Vector3 pos = new Vector3(Mathf.RoundToInt(children.position.x), Mathf.RoundToInt(children.position.y), Mathf.RoundToInt(children.position.z));
+            currentPoints.Add(pos);
         }
     }
 
-    void AddToGrid()
+    public void CheckClash(TerisBlock another)
     {
-        foreach (Transform children in transform)
+        foreach (Vector3 pos in currentPoints)
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
+            if (another.currentPoints.Contains(pos))
             {
+                another.MoveBack();
                 break;
             }
         }
     }
 
-    bool CheckForGameover(int hei)
+    public void CheckRotClash(TerisBlock another, bool isBlock)
     {
-        if (hei >= height-2)
+        foreach (Vector3 pos in currentPoints)
         {
-            UImanager.Instance.Gameover();
-            return true;
-        }
-        return false;
-    }
-
-    bool ValidMove()
-    {
-        foreach (Transform children in transform)
-        {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            if (roundedX < 0 || roundedX >= width || roundedY < 0 || roundedY >= height)
+            if (another.currentPoints.Contains(pos))
             {
-                return false;
-            }
-            if (grid[roundedX, roundedY] != null)
-            {
-                return false;
-            }
-
-        }
-        return true;
-
-    }
-
-    void CheckForLines()
-    {
-        for(int i = height - 1; i >= 0; i--)
-        {
-            if (HasLine(i))
-            {
-                DeleteLine(i);
-                RowDown(i);
-            }
-        }
-    }
-
-    bool HasLine(int i)
-    {
-        for(int j=0; j < width; j++)
-        {
-            if (grid[j, i] == null)
-                return false;
-        }
-        return true;
-    }
-
-    void DeleteLine(int i)
-    {
-        for (int j = 0; j < width; j++)
-        {
-            Destroy(grid[j,i].gameObject);
-            grid[j, i] = null;
-        }
-    }
-
-    void RowDown(int i)
-    {
-        for (int y = i; y < height; y++)
-        {
-            for (int j = 0; j < width; j++)
-            {
-                if (grid[j, y] != null)
+                if (isBlock)
                 {
-                    grid[j, y - 1] = grid[j, y];
-                    grid[j, y] = null;
-                    grid[j, y - 1].transform.position -= new Vector3(0, 1, 0);
+                    another.RotBack();
+                    break;
+                }
+                else
+                {
+                    RotBack();
+                    another.RotBack();
+                    break;
                 }
             }
         }
     }
+
+
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
 }
+
+
+
+
