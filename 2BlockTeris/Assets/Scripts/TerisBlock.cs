@@ -67,7 +67,7 @@ public class TerisBlock : MonoBehaviour
         }
     }
 
-    public void CheckRotClash(TerisBlock another, bool isBlock)
+    public bool CheckRotClash(TerisBlock another, bool isBlock)
     {
         foreach (Vector3 pos in currentPoints)
         {
@@ -76,16 +76,19 @@ public class TerisBlock : MonoBehaviour
                 if (isBlock)
                 {
                     another.RotBack();
-                    break;
+                    return false;
                 }
                 else
                 {
                     RotBack();
                     another.RotBack();
-                    break;
+                    return false;
                 }
+                
             }
         }
+        return true;
+
     }
 
 

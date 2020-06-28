@@ -12,6 +12,7 @@ public class UImanager : Singleton<UImanager>
     public Image next2_Img;
     int score;
     int max;
+    int Change_Speed = 5;
     public int Score
     {
         get { return score; }
@@ -37,13 +38,30 @@ public class UImanager : Singleton<UImanager>
 
     public void AddScore(int amount)
     {
-        Score += amount;
+        StartCoroutine(AddScoreCor(amount));
+    }
+
+    IEnumerator AddScoreCor(int amount)
+    {
+        int delta = amount / Change_Speed;
+        for(int i = 0; i < Change_Speed; i++)
+        {
+            Score += delta;
+            yield return new WaitForSeconds(0.05f);
+        }
+        if (Score > Max)
+        {
+            PlayerPrefs.SetInt("Max", Score);
+            Max = Score;
+        }
+        StopCoroutine("AddScoreCor");
     }
 
     // Start is called before the first frame update
     void Start()
     {
         Score = 0;
+        Max = PlayerPrefs.GetInt("Max", 0);
     }
 
     // Update is called once per frame
@@ -65,8 +83,8 @@ public class UImanager : Singleton<UImanager>
 
     public void RestartBtnClick()
     {
-        Game.Instance.gameOver = false;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        Sound.Instance.PlayEffect("按钮");
+        Game.Instance.ReloadScene();
     }
 
     public void ShowNextTeris(TerisItem item1, TerisItem item2)

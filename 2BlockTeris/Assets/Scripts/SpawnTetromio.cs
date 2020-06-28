@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class SpawnTetromio : Singleton<SpawnTetromio>
 {
-
+    public CameraShake camShake;
     public float falltime = 0.8f;
-
+    float nextFall = 0.8f;
+    float fastCoolDown = 1f;
     float previousTime;
     Transform spawnPoint1;
     Transform spawnPoint2;
@@ -33,6 +34,8 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         spawnPoint1 = transform.Find("SpawnPoint1");
         spawnPoint2 = transform.Find("SpawnPoint2");
 
+        Sound.Instance.PlayBg("背景音乐1");
+        Game.Instance.gameOver = false;
         RandomNextTeris();
         NewTetromino();
         //GameEvents.Instance.onTetrominosFalled += CheckTwoTerisFalled;
@@ -49,16 +52,38 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         TerisItem Z = new TerisItem("Images/Z", "Prefabs/Z");
         TerisItem Bomb = new TerisItem("Images/BOMB", "Prefabs/BOMB");
 
+        TerisItem C = new TerisItem("Imagesz/C", "Prefabs/C");
+        TerisItem Y = new TerisItem("Images/Y", "Prefabs/Y");
+
         items.Add(I);
         items.Add(T);
         items.Add(J);
-        items.Add(L);
-        items.Add(O);
-        items.Add(S);
-        items.Add(Z);
-        items.Add(Bomb);
+        //items.Add(L);
+        //items.Add(O);
+        //items.Add(S);
+        //items.Add(Z);
+        //items.Add(Bomb);
+        items.Add(C);
+        items.Add(Y);
 
     }
+
+
+    private void OnDrawGizmos()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 20; j++)
+            {
+                if (grid[i, j] != null)
+                {
+                    Gizmos.DrawCube(grid[i, j].position, new Vector3(0.2f, 0.2f, 0.2f));
+                }
+            }
+        }
+    }
+
+ 
 
     void RandomNextTeris()
     {
@@ -110,13 +135,19 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
     {
         if (Game.Instance.gameOver)
             return;
+        
         if (!waitingForNextRound)
         {
             if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
             {
                 teris1.Move(new Vector3(-1, 0, 0));
                 teris2.Move(new Vector3(-1, 0, 0));
-                MoveBack(ValidMove(), false);
+                int valid = ValidMove();
+                if (valid != 1)
+                {
+                    Sound.Instance.PlayEffect("移动");
+                }
+                MoveBack(valid, false);
 
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
@@ -124,24 +155,47 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
 
                 teris1.Move(new Vector3(1, 0, 0));
                 teris2.Move(new Vector3(1, 0, 0));
-
-                MoveBack(ValidMove(), false);
+                int valid = ValidMove();
+                if (valid != 1)
+                {
+                    Sound.Instance.PlayEffect("移动");
+                }
+                MoveBack(valid, false);
             }
             else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
             {
                 teris1.Rot();
                 teris2.Rot();
+                int valid = ValidMove();
+                bool rotable = teris1.CheckRotClash(teris2, false);
+                if (valid != 1 && rotable)
+                {
+                    Sound.Instance.PlayEffect("旋转");
+                }
                 RotBack(ValidMove());
-                teris1.CheckRotClash(teris2, false);
+
             }
 
-            if (Time.time - previousTime > (Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S) ? falltime / 10 : falltime))
+            
+            if ((Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S)))
             {
+                nextFall = 0.08f;
+
+            }
+            else
+            {
+                nextFall = falltime;
+            }
+
+            if (Time.time - previousTime > nextFall)
+            {
+
 
                 teris1.Move(new Vector3(0, -1, 0));
                 teris2.Move(new Vector3(0, -1, 0));
+                int valid = ValidMove();
 
-                MoveBack(ValidMove(), true);
+                MoveBack(valid, true);
 
                 previousTime = Time.time;
             }
@@ -245,22 +299,23 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
 
     void BombEffect(TerisBlock teris)
     {
-        if (teris.transform.GetChild(0).GetComponent<Animator>() != null)
-        {
-            teris.transform.GetChild(0).GetComponent<Animator>().SetTrigger("Dispear");
-        }
+        teris.isBomb = false;
         teris.enabled = false;
-        GameObject effect = Instantiate(Resources.Load<GameObject>("Effect/BombEffect"), teris.transform.position, Quaternion.identity);
+        GameObject effect = Instantiate(Resources.Load<GameObject>("Effect/Bomb_Anim_Effect"), teris.transform.position, Quaternion.identity);
+        Sound.Instance.PlayEffect("Explosion");
+        StartCoroutine(camShake.Shake(.15f, .25f));
+
+
         Transform children = teris.transform.GetChild(0);
         int roundedX = Mathf.RoundToInt(children.transform.position.x);
         int roundedY = Mathf.RoundToInt(children.transform.position.y);
 
-        for (int x = roundedX - 2; x < roundedX + 3; x++)
+        for (int x = roundedX - 2; x < roundedX + 2; x++)
         {
             for (int y = roundedY - 2; y < roundedY + 3; y++)
             {
                 int newx = Mathf.Clamp(x, 0, 9);
-                int newy = Mathf.Clamp(y, 0, 20);
+                int newy = Mathf.Clamp(y, 0, 19);
                 if (grid[newx, newy] != null)
                 {
                     Destroy(grid[newx, newy].gameObject);
@@ -280,9 +335,9 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
                 falled2 = true;
                 break;
         }
-        
-        Destroy(effect, 2f);
-        Destroy(teris.gameObject,0.5f);
+
+        Destroy(effect, 0.55f);
+        teris.gameObject.SetActive(false);
     }
 
     void AddToGrid(TerisBlock teris1, TerisBlock teris2)

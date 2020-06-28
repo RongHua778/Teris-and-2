@@ -22,6 +22,7 @@ public class Game : Singleton<Game>
     public void LoadScene(int index)
     {
         //StartCoroutine(Transition(index));
+        Sound.Instance.PlayEffect("按钮");
         SceneManager.LoadScene(index, LoadSceneMode.Single);
     }
 
