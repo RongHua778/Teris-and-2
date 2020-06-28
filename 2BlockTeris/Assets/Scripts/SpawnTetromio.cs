@@ -140,8 +140,10 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         {
             if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
             {
-                teris1.Move(new Vector3(-1, 0, 0));
-                teris2.Move(new Vector3(-1, 0, 0));
+                if(teris1!=null)
+                    teris1.Move(new Vector3(-1, 0, 0));
+                if (teris2 != null)
+                    teris2.Move(new Vector3(-1, 0, 0));
                 int valid = ValidMove();
                 if (valid != 1)
                 {
@@ -152,9 +154,10 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
             {
-
-                teris1.Move(new Vector3(1, 0, 0));
-                teris2.Move(new Vector3(1, 0, 0));
+                if (teris1 != null)
+                    teris1.Move(new Vector3(1, 0, 0));
+                if (teris2 != null)
+                    teris2.Move(new Vector3(1, 0, 0));
                 int valid = ValidMove();
                 if (valid != 1)
                 {
@@ -164,8 +167,10 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
             }
             else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
             {
-                teris1.Rot();
-                teris2.Rot();
+                if (teris1 != null)
+                    teris1.Rot();
+                if (teris2 != null)
+                    teris2.Rot();
                 int valid = ValidMove();
                 bool rotable = teris1.CheckRotClash(teris2, false);
                 if (valid != 1 && rotable)
@@ -190,9 +195,10 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
             if (Time.time - previousTime > nextFall)
             {
 
-
-                teris1.Move(new Vector3(0, -1, 0));
-                teris2.Move(new Vector3(0, -1, 0));
+                if(teris1!=null)
+                    teris1.Move(new Vector3(0, -1, 0));
+                if (teris2 != null)
+                    teris2.Move(new Vector3(0, -1, 0));
                 int valid = ValidMove();
 
                 MoveBack(valid, true);
@@ -262,28 +268,43 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
 
         bool t1CanMove = true;
         bool t2CanMove = true;
-        foreach (Transform children in teris1.transform)
+        if (teris1 != null)
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            if (roundedX < 0 || roundedX >= width || roundedY < 0 || roundedY >= height || grid[roundedX, roundedY] != null)
+            foreach (Transform children in teris1.transform)
             {
-                t1CanMove = false;
-                break;
-            }
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                if (roundedX < 0 || roundedX >= width || roundedY < 0 || roundedY >= height || grid[roundedX, roundedY] != null)
+                {
+                    t1CanMove = false;
+                    break;
+                }
 
+            }
         }
-        foreach (Transform children in teris2.transform)
+        else
         {
-            int roundedX2 = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY2 = Mathf.RoundToInt(children.transform.position.y);
-            if (roundedX2 < 0 || roundedX2 >= width || roundedY2 < 0 || roundedY2 >= height || grid[roundedX2, roundedY2] != null)
-            {
-                t2CanMove = false;
-                break;
-            }
-
+            t1CanMove = false;
         }
+        if (teris2 != null)
+        {
+            foreach (Transform children in teris2.transform)
+            {
+                int roundedX2 = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY2 = Mathf.RoundToInt(children.transform.position.y);
+                if (roundedX2 < 0 || roundedX2 >= width || roundedY2 < 0 || roundedY2 >= height || grid[roundedX2, roundedY2] != null)
+                {
+                    t2CanMove = false;
+                    break;
+                }
+
+            }
+        }
+        else
+        {
+            t2CanMove = false;
+        }
+
         if (t1CanMove && t2CanMove)
             return 0;
         else if (!t1CanMove && !t2CanMove)
@@ -340,90 +361,143 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         teris.gameObject.SetActive(false);
     }
 
-    void AddToGrid(TerisBlock teris1, TerisBlock teris2)
-    {
-        if (teris1.isBomb)
-        {
-            BombEffect(teris1);
-        }
-        else
-        {
-            foreach (Transform children in teris1.transform)
-            {
-                int roundedX = Mathf.RoundToInt(children.transform.position.x);
-                int roundedY = Mathf.RoundToInt(children.transform.position.y);
-                grid[roundedX, roundedY] = children;
-                if (CheckForGameover(roundedY))
-                {
-                    break;
-                }
-            }
-            teris1.enabled = false;
-        }
-        if (teris2.isBomb)
-        {
-            BombEffect(teris2);
-        }
-        else
-        {
-            foreach (Transform children in teris2.transform)
-            {
-                int roundedX = Mathf.RoundToInt(children.transform.position.x);
-                int roundedY = Mathf.RoundToInt(children.transform.position.y);
-                grid[roundedX, roundedY] = children;
-                if (CheckForGameover(roundedY))
-                {
-                    break;
-                }
-            }
-            teris2.enabled = false;
+    public Transform allTiles;
+   // void AddToGrid(TerisBlock teris)
+    //{
+    //    teris.enabled = false;
+    //    teris.transform.SetParent(allTiles);
+    //    switch (teris.ID)
+    //    {
+    //        case 1:
+    //            falled1 = true;
+    //            teris1 = null;
+    //            break;
+    //        case 2:
+    //            teris2 = null;
+    //            falled2 = true;
+    //            break;
+    //    }
+    //    CheckForLines();
+    //    CheckTwoTerisFalled();
 
-        }
+        //if (teris.isBomb)
+        //{
+        //    BombEffect(teris);
+        //}
+        //else
+        //{
+        //    foreach (Transform children in teris.transform)
+        //    {
+        //        int roundedX = Mathf.RoundToInt(children.transform.position.x);
+        //        int roundedY = Mathf.RoundToInt(children.transform.position.y);
+        //        grid[roundedX, roundedY] = children;
+        //        if (CheckForGameover(roundedY))
+        //        {
+        //            break;
+        //        }
+        //    }
+        //    switch (teris.ID)
+        //    {
+        //        case 1:
+        //            falled1 = true;
+        //            break;
+        //        case 2:
+        //            falled2 = true;
+        //            break;
+        //    }
+        //    teris.enabled = false;
+        //}
 
-        falled1 = true;
-        falled2 = true;
-
-        CheckForLines();
-        CheckTwoTerisFalled();
-    }
-
-    void AddToGrid(TerisBlock teris)
-    {
-        if (teris.isBomb)
-        {
-            BombEffect(teris);
-        }
-        else
-        {
-            foreach (Transform children in teris.transform)
-            {
-                int roundedX = Mathf.RoundToInt(children.transform.position.x);
-                int roundedY = Mathf.RoundToInt(children.transform.position.y);
-                grid[roundedX, roundedY] = children;
-                if (CheckForGameover(roundedY))
-                {
-                    break;
-                }
-            }
-            switch (teris.ID)
-            {
-                case 1:
-                    falled1 = true;
-                    break;
-                case 2:
-                    falled2 = true;
-                    break;
-            }
-            teris.enabled = false;
-        }
-
-        CheckForLines();
-        CheckTwoTerisFalled();
+        //CheckForLines();
+        //CheckTwoTerisFalled();
     }
 
 
 
-    bool CheckForGameover(int hei)
+void AddToGrid(TerisBlock teris1, TerisBlock teris2)
+{
+    if (teris1.isBomb)
+    {
+        BombEffect(teris1);
+    }
+    else
+    {
+        foreach (Transform children in teris1.transform)
+        {
+            int roundedX = Mathf.RoundToInt(children.transform.position.x);
+            int roundedY = Mathf.RoundToInt(children.transform.position.y);
+            grid[roundedX, roundedY] = children;
+            if (CheckForGameover(roundedY))
+            {
+                break;
+            }
+        }
+        teris1.enabled = false;
+    }
+    if (teris2.isBomb)
+    {
+        BombEffect(teris2);
+    }
+    else
+    {
+        foreach (Transform children in teris2.transform)
+        {
+            int roundedX = Mathf.RoundToInt(children.transform.position.x);
+            int roundedY = Mathf.RoundToInt(children.transform.position.y);
+            grid[roundedX, roundedY] = children;
+            if (CheckForGameover(roundedY))
+            {
+                break;
+            }
+        }
+        teris2.enabled = false;
+
+    }
+
+    falled1 = true;
+    falled2 = true;
+
+    CheckForLines();
+    CheckTwoTerisFalled();
+}
+
+void AddToGrid(TerisBlock teris)
+{
+    if (teris.isBomb)
+    {
+        BombEffect(teris);
+    }
+    else
+    {
+        foreach (Transform children in teris.transform)
+        {
+            int roundedX = Mathf.RoundToInt(children.transform.position.x);
+            int roundedY = Mathf.RoundToInt(children.transform.position.y);
+            grid[roundedX, roundedY] = children;
+            if (CheckForGameover(roundedY))
+            {
+                break;
+            }
+        }
+        switch (teris.ID)
+        {
+            case 1:
+                falled1 = true;
+                break;
+            case 2:
+                falled2 = true;
+                break;
+        }
+        teris.enabled = false;
+    }
+
+    CheckForLines();
+    CheckTwoTerisFalled();
+}
+
+
+
+bool CheckForGameover(int hei)
     {
         if (hei >= height - 1.5f)
         {
