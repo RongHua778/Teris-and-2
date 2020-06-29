@@ -77,18 +77,18 @@ public class TerisBlock : MonoBehaviour
                 {
                     another.RotBack();
                     return false;
+                    
                 }
                 else
                 {
                     RotBack();
                     another.RotBack();
                     return false;
+
                 }
-                
             }
         }
         return true;
-
     }
 
 

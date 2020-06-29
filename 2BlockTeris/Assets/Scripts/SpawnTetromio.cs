@@ -4,10 +4,9 @@ using UnityEngine;
 
 public class SpawnTetromio : Singleton<SpawnTetromio>
 {
-    public CameraShake camShake;
+
     public float falltime = 0.8f;
-    float nextFall = 0.8f;
-    float fastCoolDown = 1f;
+
     float previousTime;
     Transform spawnPoint1;
     Transform spawnPoint2;
@@ -34,8 +33,6 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         spawnPoint1 = transform.Find("SpawnPoint1");
         spawnPoint2 = transform.Find("SpawnPoint2");
 
-        Sound.Instance.PlayBg("背景音乐1");
-        Game.Instance.gameOver = false;
         RandomNextTeris();
         NewTetromino();
         //GameEvents.Instance.onTetrominosFalled += CheckTwoTerisFalled;
@@ -52,38 +49,16 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
         TerisItem Z = new TerisItem("Images/Z", "Prefabs/Z");
         TerisItem Bomb = new TerisItem("Images/BOMB", "Prefabs/BOMB");
 
-        TerisItem C = new TerisItem("Imagesz/C", "Prefabs/C");
-        TerisItem Y = new TerisItem("Images/Y", "Prefabs/Y");
-
         items.Add(I);
         items.Add(T);
         items.Add(J);
-        //items.Add(L);
-        //items.Add(O);
-        //items.Add(S);
-        //items.Add(Z);
-        //items.Add(Bomb);
-        items.Add(C);
-        items.Add(Y);
+        items.Add(L);
+        items.Add(O);
+        items.Add(S);
+        items.Add(Z);
+        items.Add(Bomb);
 
     }
-
-
-    private void OnDrawGizmos()
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            for (int j = 0; j < 20; j++)
-            {
-                if (grid[i, j] != null)
-                {
-                    Gizmos.DrawCube(grid[i, j].position, new Vector3(0.2f, 0.2f, 0.2f));
-                }
-            }
-        }
-    }
-
- 
 
     void RandomNextTeris()
     {
@@ -135,12 +110,12 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
     {
         if (Game.Instance.gameOver)
             return;
-        
         if (!waitingForNextRound)
         {
             if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
             {
-                if(teris1!=null)
+
+                if (teris1 != null)
                     teris1.Move(new Vector3(-1, 0, 0));
                 if (teris2 != null)
                     teris2.Move(new Vector3(-1, 0, 0));
@@ -151,9 +126,15 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
                 }
                 MoveBack(valid, false);
 
+                teris1.Move(new Vector3(-1, 0, 0));
+                teris2.Move(new Vector3(-1, 0, 0));
+                MoveBack(ValidMove(), false);
+
+
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
             {
+
                 if (teris1 != null)
                     teris1.Move(new Vector3(1, 0, 0));
                 if (teris2 != null)
@@ -177,31 +158,37 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
                 {
                     Sound.Instance.PlayEffect("旋转");
                 }
+
+
+                teris1.Move(new Vector3(1, 0, 0));
+                teris2.Move(new Vector3(1, 0, 0));
+
+                MoveBack(ValidMove(), false);
+            }
+            else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
+            {
+                teris1.Rot();
+                teris2.Rot();
+
                 RotBack(ValidMove());
-
+                teris1.CheckRotClash(teris2, false);
             }
 
-            
-            if ((Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S)))
-            {
-                nextFall = 0.08f;
-
-            }
-            else
-            {
-                nextFall = falltime;
-            }
-
-            if (Time.time - previousTime > nextFall)
+            if (Time.time - previousTime > (Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.S) ? falltime / 10 : falltime))
             {
 
-                if(teris1!=null)
+
+                if (teris1 != null)
                     teris1.Move(new Vector3(0, -1, 0));
                 if (teris2 != null)
                     teris2.Move(new Vector3(0, -1, 0));
                 int valid = ValidMove();
 
-                MoveBack(valid, true);
+                teris1.Move(new Vector3(0, -1, 0));
+                teris2.Move(new Vector3(0, -1, 0));
+
+
+                MoveBack(ValidMove(), true);
 
                 previousTime = Time.time;
             }
@@ -242,24 +229,29 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
             case 0:
                 break;
             case 1:
+                waitingForNextRound = true;
                 teris1.MoveBack();
                 teris2.MoveBack();
                 if (isDown)
                 {
-                    AddToGrid(teris1, teris2);
+                    AddToGridNew2(teris1, teris2);
                 }
                 break;
             case 2:
+                waitingForNextRound = true;
+
                 teris2.MoveBack();
                 teris2.CheckClash(teris1);
                 if (isDown)
-                    AddToGrid(teris2);
+                    AddToGridNew(teris2);
                 break;
             case 3:
+                waitingForNextRound = true;
+
                 teris1.MoveBack();
                 teris1.CheckClash(teris2);
                 if (isDown)
-                    AddToGrid(teris1);
+                    AddToGridNew(teris1);
                 break;
         }
     }
@@ -320,23 +312,22 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
 
     void BombEffect(TerisBlock teris)
     {
-        teris.isBomb = false;
+        if (teris.transform.GetChild(0).GetComponent<Animator>() != null)
+        {
+            teris.transform.GetChild(0).GetComponent<Animator>().SetTrigger("Dispear");
+        }
         teris.enabled = false;
-        GameObject effect = Instantiate(Resources.Load<GameObject>("Effect/Bomb_Anim_Effect"), teris.transform.position, Quaternion.identity);
-        Sound.Instance.PlayEffect("Explosion");
-        StartCoroutine(camShake.Shake(.15f, .25f));
-
-
+        GameObject effect = Instantiate(Resources.Load<GameObject>("Effect/BombEffect"), teris.transform.position, Quaternion.identity);
         Transform children = teris.transform.GetChild(0);
         int roundedX = Mathf.RoundToInt(children.transform.position.x);
         int roundedY = Mathf.RoundToInt(children.transform.position.y);
 
-        for (int x = roundedX - 2; x < roundedX + 2; x++)
+        for (int x = roundedX - 2; x < roundedX + 3; x++)
         {
             for (int y = roundedY - 2; y < roundedY + 3; y++)
             {
                 int newx = Mathf.Clamp(x, 0, 9);
-                int newy = Mathf.Clamp(y, 0, 19);
+                int newy = Mathf.Clamp(y, 0, 20);
                 if (grid[newx, newy] != null)
                 {
                     Destroy(grid[newx, newy].gameObject);
@@ -357,12 +348,12 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
                 break;
         }
 
-        Destroy(effect, 0.55f);
-        teris.gameObject.SetActive(false);
+        Destroy(effect, 2f);
+        Destroy(teris.gameObject, 0.5f);
     }
 
     public Transform allTiles;
-   // void AddToGrid(TerisBlock teris)
+    // void AddToGrid(TerisBlock teris)
     //{
     //    teris.enabled = false;
     //    teris.transform.SetParent(allTiles);
@@ -380,105 +371,125 @@ public class SpawnTetromio : Singleton<SpawnTetromio>
     //    CheckForLines();
     //    CheckTwoTerisFalled();
 
-        //if (teris.isBomb)
-        //{
-        //    BombEffect(teris);
-        //}
-        //else
-        //{
-        //    foreach (Transform children in teris.transform)
-        //    {
-        //        int roundedX = Mathf.RoundToInt(children.transform.position.x);
-        //        int roundedY = Mathf.RoundToInt(children.transform.position.y);
-        //        grid[roundedX, roundedY] = children;
-        //        if (CheckForGameover(roundedY))
-        //        {
-        //            break;
-        //        }
-        //    }
-        //    switch (teris.ID)
-        //    {
-        //        case 1:
-        //            falled1 = true;
-        //            break;
-        //        case 2:
-        //            falled2 = true;
-        //            break;
-        //    }
-        //    teris.enabled = false;
-        //}
+    //if (teris.isBomb)
+    //{
+    //    BombEffect(teris);
+    //}
+    //else
+    //{
+    //    foreach (Transform children in teris.transform)
+    //    {
+    //        int roundedX = Mathf.RoundToInt(children.transform.position.x);
+    //        int roundedY = Mathf.RoundToInt(children.transform.position.y);
+    //        grid[roundedX, roundedY] = children;
+    //        if (CheckForGameover(roundedY))
+    //        {
+    //            break;
+    //        }
+    //    }
+    //    switch (teris.ID)
+    //    {
+    //        case 1:
+    //            falled1 = true;
+    //            break;
+    //        case 2:
+    //            falled2 = true;
+    //            break;
+    //    }
+    //    teris.enabled = false;
+    //}
 
-        //CheckForLines();
-        //CheckTwoTerisFalled();
-    }
+    //CheckForLines();
+    //CheckTwoTerisFalled();
+    //}
 
 
 
-void AddToGrid(TerisBlock teris1, TerisBlock teris2)
-{
-    if (teris1.isBomb)
+    void AddToGrid(TerisBlock teris1, TerisBlock teris2)
     {
-        BombEffect(teris1);
-    }
-    else
-    {
-        foreach (Transform children in teris1.transform)
+        if (teris1.isBomb)
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
-            {
-                break;
-            }
+            BombEffect(teris1);
         }
-        teris1.enabled = false;
-    }
-    if (teris2.isBomb)
-    {
-        BombEffect(teris2);
-    }
-    else
-    {
-        foreach (Transform children in teris2.transform)
+        else
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
+            foreach (Transform children in teris1.transform)
             {
-                break;
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                grid[roundedX, roundedY] = children;
+                if (CheckForGameover(roundedY))
+                {
+                    break;
+                }
             }
+            teris1.enabled = false;
         }
-        teris2.enabled = false;
-
-    }
-
-    falled1 = true;
-    falled2 = true;
-
-    CheckForLines();
-    CheckTwoTerisFalled();
-}
-
-void AddToGrid(TerisBlock teris)
-{
-    if (teris.isBomb)
-    {
-        BombEffect(teris);
-    }
-    else
-    {
-        foreach (Transform children in teris.transform)
+        if (teris2.isBomb)
         {
-            int roundedX = Mathf.RoundToInt(children.transform.position.x);
-            int roundedY = Mathf.RoundToInt(children.transform.position.y);
-            grid[roundedX, roundedY] = children;
-            if (CheckForGameover(roundedY))
-            {
-                break;
-            }
+            BombEffect(teris2);
         }
+        else
+        {
+            foreach (Transform children in teris2.transform)
+            {
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                grid[roundedX, roundedY] = children;
+                if (CheckForGameover(roundedY))
+                {
+                    break;
+                }
+            }
+            teris2.enabled = false;
+
+        }
+
+        falled1 = true;
+        falled2 = true;
+
+        CheckForLines();
+        CheckTwoTerisFalled();
+    }
+
+    void AddToGrid(TerisBlock teris)
+    {
+        if (teris.isBomb)
+        {
+            BombEffect(teris);
+        }
+        else
+        {
+            foreach (Transform children in teris.transform)
+            {
+                int roundedX = Mathf.RoundToInt(children.transform.position.x);
+                int roundedY = Mathf.RoundToInt(children.transform.position.y);
+                grid[roundedX, roundedY] = children;
+                if (CheckForGameover(roundedY))
+                {
+                    break;
+                }
+            }
+            switch (teris.ID)
+            {
+                case 1:
+                    falled1 = true;
+                    break;
+                case 2:
+                    falled2 = true;
+                    break;
+            }
+            teris.enabled = false;
+        }
+
+        CheckForLines();
+        CheckTwoTerisFalled();
+    }
+
+    public Transform Alltiles;
+    void AddToGridNew(TerisBlock teris)
+    {
+        teris.transform.SetParent(allTiles);
         switch (teris.ID)
         {
             case 1:
@@ -489,15 +500,23 @@ void AddToGrid(TerisBlock teris)
                 break;
         }
         teris.enabled = false;
+        CheckForLines();
+        CheckTwoTerisFalled();
     }
 
-    CheckForLines();
-    CheckTwoTerisFalled();
-}
+    void AddToGridNew2(TerisBlock teris1, TerisBlock teris2)
+    {
+        teris1.transform.SetParent(allTiles);
+        teris2.transform.SetParent(allTiles);
+        falled1 = true;
+        falled2 = true;
+        teris1.enabled = false;
+        teris2.enabled = false;
+        CheckForLines();
+        CheckTwoTerisFalled();
+    }
 
-
-
-bool CheckForGameover(int hei)
+    bool CheckForGameover(int hei)
     {
         if (hei >= height - 1.5f)
         {
